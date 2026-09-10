@@ -16,10 +16,14 @@ MonoBehaviour:
   - Vizzy McBlinky.dll
   _author: Dooiereier
   _description: 'Jump straight to any part of a large Vizzy program. Tag a comment
-    with "//Path/To/Name" and it shows up in a color-coded, nested "Jump to" list
-    - select an entry and the canvas pans right to it. Works with no mod installed:
-    the tags are just ordinary comments either way. Also checks for updates on
-    startup.'
+    with, for example, "//Launch/Thrust Profile" or "//Orbit Details" and it shows
+    up in a color-coded, nested "Jump to" list - select an entry and the canvas pans
+    right to it. Works with no mod installed: the tags are just ordinary comments
+    either way. Also checks for mod updates on startup.
+
+
+    <color=red>Requires
+    Harmony!'
   _loadPriority: 1
   _name: Vizzy McBlinky
   _otherAssets: []
@@ -31,7 +35,7 @@ MonoBehaviour:
   _steamTitle: 
   _steamVisibility: 0
   _versionMajor: 1
-  _versionMinor: 0
+  _versionMinor: 1
   _partCategories: []
   _parts: []
   _partStyleExtensions: []
