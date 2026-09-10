@@ -137,6 +137,17 @@ namespace Assets.Scripts.VizzyOrganizer
             contentRect.anchorMax = new Vector2(1f, 1f);
             contentRect.pivot = new Vector2(0.5f, 1f);
             contentRect.anchoredPosition = Vector2.zero;
+            // The actual root cause of the leading-characters-missing bug: for a fully
+            // horizontally-stretched RectTransform (anchorMin.x=0, anchorMax.x=1), the real
+            // width is parentWidth + sizeDelta.x - the stretch does not override sizeDelta,
+            // it adds to it. This was left at the GameObject default of (100, 100), so
+            // Content rendered 100 units wider than the Viewport and overhung its mask by 50
+            // units on each side (centered on pivot.x=0.5) - and the Viewport's RectMask2D
+            // clipped straight into every row's left-indented text by that same 50 units,
+            // worst on shallow-indent rows and unnoticeable on deeply-indented ones. None of
+            // the earlier scrollbar/overflow/bold fixes touched this because it was never a
+            // text or layout-visibility issue - just this one missing sizeDelta reset.
+            contentRect.sizeDelta = Vector2.zero;
 
             var layout = contentGo.GetComponent<VerticalLayoutGroup>();
             layout.childForceExpandHeight = false;
