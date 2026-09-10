@@ -27,8 +27,10 @@ namespace Assets.Scripts.VizzyOrganizer
 
         private VizzyUIController _controller;
         private VizzyFolderIndex _index = new VizzyFolderIndex();
-        private RectTransform _rowContainer;
+        private RectTransform _rowContainer; // the ScrollRect's Content - unbounded, grows to fit every row
+        private RectTransform _popupOuter; // the visible/clipped area - height capped at _maxPopupHeight
         private GameObject _popup;
+        private float _maxPopupHeight;
 
         // null = show everything. Otherwise the ids owned by the selected row (a folder's
         // full subtree, or the uncategorized set).
@@ -75,37 +77,75 @@ namespace Assets.Scripts.VizzyOrganizer
 
             var panel = buttonGo.AddComponent<VizzyFolderPanel>();
             panel._controller = controller;
-            panel.BuildPopup(buttonRect);
+
+            // Cap the popup at the user's actual physical display height, not the game
+            // window's current render resolution (Display.main.systemHeight is the real
+            // monitor size regardless of windowed mode or the game's resolution setting).
+            // That's in raw physical pixels, so divide by the root canvas's scale factor
+            // to convert into the same UI units the popup's RectTransform is sized in.
+            var rootCanvas = buttonCanvas.rootCanvas;
+            var maxPopupHeight = Display.main.systemHeight / Mathf.Max(rootCanvas.scaleFactor, 0.01f);
+            panel.BuildPopup(buttonRect, maxPopupHeight);
+
             buttonGo.GetComponent<Button>().onClick.AddListener(panel.TogglePopup);
             return panel;
         }
 
-        private void BuildPopup(RectTransform anchor)
+        private void BuildPopup(RectTransform anchor, float maxHeight)
         {
-            _popup = new GameObject("VizzyFolderPanelPopup", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-            var popupRect = (RectTransform)_popup.transform;
-            popupRect.SetParent(anchor, false);
+            _maxPopupHeight = maxHeight;
+
+            // Outer: the visible background + the piece that gets height-clamped and
+            // scrolled. Structure is the standard Unity ScrollRect setup - Outer >
+            // Viewport (RectMask2D, clips to the clamped height) > Content (the actual
+            // row list, unbounded, sized to fit every row regardless of the clamp).
+            _popup = new GameObject("VizzyFolderPanelPopup", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+            _popupOuter = (RectTransform)_popup.transform;
+            _popupOuter.SetParent(anchor, false);
             // Anchored to the button's bottom-right corner, growing left and down from
             // there, so it stays on screen with the button pinned to the top-right.
-            popupRect.anchorMin = new Vector2(1f, 0f);
-            popupRect.anchorMax = new Vector2(1f, 0f);
-            popupRect.pivot = new Vector2(1f, 1f);
-            popupRect.anchoredPosition = new Vector2(0f, -4f);
-            popupRect.sizeDelta = new Vector2(PopupWidth, 0f);
+            _popupOuter.anchorMin = new Vector2(1f, 0f);
+            _popupOuter.anchorMax = new Vector2(1f, 0f);
+            _popupOuter.pivot = new Vector2(1f, 1f);
+            _popupOuter.anchoredPosition = new Vector2(0f, -4f);
+            _popupOuter.sizeDelta = new Vector2(PopupWidth, 0f); // height set per-refresh, clamped to maxHeight
 
             _popup.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.85f);
 
-            var layout = _popup.GetComponent<VerticalLayoutGroup>();
+            var viewportGo = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+            var viewportRect = (RectTransform)viewportGo.transform;
+            viewportRect.SetParent(_popupOuter, false);
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+
+            var contentGo = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            var contentRect = (RectTransform)contentGo.transform;
+            contentRect.SetParent(viewportRect, false);
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = new Vector2(1f, 1f);
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.anchoredPosition = Vector2.zero;
+
+            var layout = contentGo.GetComponent<VerticalLayoutGroup>();
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = true;
             layout.childAlignment = TextAnchor.UpperLeft;
             layout.padding = new RectOffset(4, 4, 4, 4);
             layout.spacing = 1f;
 
-            var fitter = _popup.GetComponent<ContentSizeFitter>();
+            var fitter = contentGo.GetComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            _rowContainer = popupRect;
+            var scrollRect = _popup.GetComponent<ScrollRect>();
+            scrollRect.content = contentRect;
+            scrollRect.viewport = viewportRect;
+            scrollRect.horizontal = false;
+            scrollRect.vertical = true;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+
+            _rowContainer = contentRect;
             _popup.SetActive(false);
         }
 
@@ -115,9 +155,19 @@ namespace Assets.Scripts.VizzyOrganizer
             _popup.SetActive(opening);
 
             // Layout groups skip inactive objects, so rows added while the popup was
-            // hidden may not have sized correctly yet - force it now that it's visible.
+            // hidden may not have sized correctly yet - force it now that it's visible,
+            // then clamp the outer popup to however tall the content actually needs to be.
             if (opening)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(_rowContainer);
+                UpdatePopupHeight();
+        }
+
+        // Sizes the popup to fit its rows, up to _maxPopupHeight - beyond that it stays
+        // capped and the ScrollRect takes over instead of growing past the screen edge.
+        private void UpdatePopupHeight()
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_rowContainer);
+            var contentHeight = _rowContainer.rect.height;
+            _popupOuter.sizeDelta = new Vector2(PopupWidth, Mathf.Min(contentHeight, _maxPopupHeight));
         }
 
         /// <summary>Rebuilds the folder tree from the currently loaded program and redraws the row list.</summary>
@@ -157,6 +207,12 @@ namespace Assets.Scripts.VizzyOrganizer
             AddRow("All", 0, null, null);
             foreach (var child in _index.Root.Children.Values.OrderBy(c => c.Name))
                 AddFolderRows(child, 1, isTopLevelSegment: true, color: null);
+
+            // Only while the popup is actually open - ForceRebuildLayoutImmediate can't
+            // measure an inactive hierarchy correctly, and TogglePopup already handles
+            // sizing it for the "was closed, just opened" case.
+            if (_popup.activeSelf)
+                UpdatePopupHeight();
 
             ApplyFilter();
         }
