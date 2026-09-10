@@ -15,9 +15,11 @@ MonoBehaviour:
   _assemblies:
   - Vizzy McBlinky.dll
   _author: Dooiereier
-  _description: Organizes large Vizzy programs into a collapsible folder tree using
-    "//Folder/Subfolder" tag comments. Works with no mod installed - the mod just
-    adds an optional folder browser on top of ordinary comments.
+  _description: 'Jump straight to any part of a large Vizzy program. Tag a comment
+    with "//Path/To/Name" and it shows up in a color-coded, nested "Jump to" list
+    - select an entry and the canvas pans right to it. Works with no mod installed:
+    the tags are just ordinary comments either way. Also checks for updates on
+    startup.'
   _loadPriority: 1
   _name: Vizzy McBlinky
   _otherAssets: []
