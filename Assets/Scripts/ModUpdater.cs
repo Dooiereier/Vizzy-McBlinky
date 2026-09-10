@@ -47,10 +47,11 @@ namespace Assets.Scripts
         public const string LatestVersionUrl =
             "https://api.github.com/repos/Dooiereier/Vizzy-McBlinky/releases/latest";
 
-        // Page opened when the player clicks "Download" - the releases list, or a
-        // specific release page.
+        // Page opened when the player clicks "Download" - the mod's actual listing on
+        // simplerockets.com, where players download mods from (not the GitHub repo,
+        // which only serves as the version-check source below).
         public const string DownloadUrl =
-            "https://github.com/Dooiereier/Vizzy-McBlinky/releases/latest";
+            "https://www.simplerockets.com/Mods/View/352576/Vizzy-McBlinky";
 
         // Channel 2 (fallback): a raw version.txt at the repo root, containing just
         // the version number (e.g. "0.6"). Used automatically if channel 1 fails
