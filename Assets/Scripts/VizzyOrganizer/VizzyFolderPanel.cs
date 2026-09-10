@@ -74,6 +74,11 @@ namespace Assets.Scripts.VizzyOrganizer
             buttonLabel.color = Color.white;
             buttonLabel.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             buttonLabel.fontSize = FontSize;
+            // Unity's Text defaults to word-wrap, which breaks single words with nowhere
+            // to wrap at mid-word - with MiddleLeft/Center alignment vertically centering
+            // the resulting multi-line block in a one-line-tall row, the first line (the
+            // word's leading characters) ends up pushed above the visible row entirely.
+            buttonLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
             buttonLabel.raycastTarget = false;
 
             var panel = buttonGo.AddComponent<VizzyFolderPanel>();
@@ -286,6 +291,7 @@ namespace Assets.Scripts.VizzyOrganizer
             text.fontStyle = FontStyle.Bold;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = FontSize;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.raycastTarget = false;
 
             var button = rowGo.GetComponent<Button>();
@@ -354,6 +360,7 @@ namespace Assets.Scripts.VizzyOrganizer
             // Bold at the top level, regular everywhere nested under it - makes root vs.
             // sub-entry obvious at a glance instead of relying on indentation alone.
             text.fontStyle = depth <= 1 ? FontStyle.Bold : FontStyle.Normal;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.raycastTarget = false;
 
             var toggle = rowGo.GetComponent<Toggle>();
