@@ -84,13 +84,23 @@ namespace Assets.Scripts.VizzyOrganizer
             var panel = buttonGo.AddComponent<VizzyFolderPanel>();
             panel._controller = controller;
 
-            // Cap the popup at the user's actual physical display height, not the game
-            // window's current render resolution (Display.main.systemHeight is the real
-            // monitor size regardless of windowed mode or the game's resolution setting).
-            // That's in raw physical pixels, so divide by the root canvas's scale factor
-            // to convert into the same UI units the popup's RectTransform is sized in.
+            // Cap the popup at however much room is actually available below the button,
+            // down to the bottom of the game's own render surface - not the full physical
+            // monitor height. Using Display.main.systemHeight here (the raw monitor size)
+            // ignored that the popup starts partway down the screen already, so it kept
+            // growing well past the bottom of the visible window/screen edge instead of
+            // clipping into a scrollbar. WorldToScreenPoint gives the button's bottom edge
+            // in actual render-surface pixels (0 = bottom of screen), which is exactly the
+            // room left underneath it; divide by the root canvas's scale factor to convert
+            // into the same UI units the popup's RectTransform is sized in.
             var rootCanvas = buttonCanvas.rootCanvas;
-            var maxPopupHeight = Display.main.systemHeight / Mathf.Max(rootCanvas.scaleFactor, 0.01f);
+            var cornersBuffer = new Vector3[4];
+            buttonRect.GetWorldCorners(cornersBuffer);
+            var screenCamera = rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : rootCanvas.worldCamera;
+            var buttonBottomScreenY = RectTransformUtility.WorldToScreenPoint(screenCamera, cornersBuffer[0]).y;
+            const float bottomMargin = 20f;
+            var availablePixels = Mathf.Max(buttonBottomScreenY - bottomMargin, RowHeight);
+            var maxPopupHeight = availablePixels / Mathf.Max(rootCanvas.scaleFactor, 0.01f);
             panel.BuildPopup(buttonRect, maxPopupHeight);
 
             buttonGo.GetComponent<Button>().onClick.AddListener(panel.TogglePopup);
