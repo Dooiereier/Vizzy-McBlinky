@@ -291,16 +291,6 @@ namespace Assets.Scripts.VizzyOrganizer
 
         private static int GetInstructionId(ProgramInstruction instruction) => ((IInstructionId)instruction).Id;
 
-        // A same-weight Outline reads as "bolder" without touching the Text's own font
-        // rendering - see the call sites for why true FontStyle.Bold was the actual cause
-        // of the leading-characters-missing bug.
-        private static void AddBoldLookingOutline(GameObject textGo)
-        {
-            var outline = textGo.AddComponent<Outline>();
-            outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            outline.effectDistance = new Vector2(1f, -1f);
-        }
-
         // A plain action row (not a filter toggle) - e.g. "Refresh", so the tree can be
         // forced up to date without relying on catching every internal edit path.
         private void AddActionRow(string label, System.Action onClick)
@@ -331,11 +321,11 @@ namespace Assets.Scripts.VizzyOrganizer
             text.text = label;
             text.alignment = TextAnchor.MiddleLeft;
             text.color = new Color(0.6f, 0.85f, 1f);
+            text.fontStyle = FontStyle.Bold;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = FontSize;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.raycastTarget = false;
-            AddBoldLookingOutline(textGo);
 
             var button = rowGo.GetComponent<Button>();
             button.targetGraphic = rowImage;
@@ -400,17 +390,11 @@ namespace Assets.Scripts.VizzyOrganizer
             text.color = labelColor ?? Color.white;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = FontSize;
+            // Bold at the top level, regular everywhere nested under it - makes root vs.
+            // sub-entry obvious at a glance instead of relying on indentation alone.
+            text.fontStyle = depth <= 1 ? FontStyle.Bold : FontStyle.Normal;
             text.horizontalOverflow = HorizontalWrapMode.Overflow;
             text.raycastTarget = false;
-            // Root-level rows get an outline instead of true FontStyle.Bold - the screenshot
-            // evidence showed every truncated row was exactly the bold ones (root-level rows
-            // and the always-bold "Refresh"/action rows), while every plain-weight row (depth
-            // 2+) rendered its full label with no changes needed. Unity's legacy Text bold
-            // synthesis on the built-in font appears to miscompute glyph placement and clips
-            // leading characters against the popup's mask - Outline gives the same "stands
-            // out" effect without going through that broken code path.
-            if (depth <= 1)
-                AddBoldLookingOutline(textGo);
 
             var toggle = rowGo.GetComponent<Toggle>();
             toggle.targetGraphic = rowImage;
