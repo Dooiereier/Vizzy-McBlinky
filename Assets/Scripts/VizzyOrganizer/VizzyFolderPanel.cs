@@ -182,7 +182,12 @@ namespace Assets.Scripts.VizzyOrganizer
             scrollRect.vertical = true;
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
             scrollRect.verticalScrollbar = scrollbar;
-            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            // AutoHide (not Permanent): the space for the scrollbar is already reserved
+            // statically above (viewportRect.offsetMax), so hiding the bar itself when the
+            // content fits within maxPopupHeight doesn't reintroduce the old dynamic-resize
+            // clipping bug - it just stops a full-height bar (handle always covering 100% of
+            // a track with nothing to scroll) from rendering as one giant solid block.
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
             _rowContainer = contentRect;
             _popup.SetActive(false);
@@ -207,6 +212,23 @@ namespace Assets.Scripts.VizzyOrganizer
             LayoutRebuilder.ForceRebuildLayoutImmediate(_rowContainer);
             var contentHeight = _rowContainer.rect.height;
             _popupOuter.sizeDelta = new Vector2(PopupWidth, Mathf.Min(contentHeight, _maxPopupHeight));
+
+            // TEMPORARY: two guesses (static scrollbar layout, then Overflow instead of
+            // Wrap) both failed to fix leading characters going missing from row/button
+            // text, with the symptom pixel-identical before and after each. Log the actual
+            // post-layout numbers for every row's Text instead of guessing a third time.
+            foreach (var text in _rowContainer.GetComponentsInChildren<Text>(true))
+            {
+                var rt = (RectTransform)text.transform;
+                var parentCanvas = rt.GetComponentInParent<Canvas>();
+                var canvasScale = parentCanvas != null ? parentCanvas.rootCanvas.scaleFactor : -1f;
+                Debug.Log($"[Vizzy McBlinky] row text=\"{text.text}\" rectWidth={rt.rect.width:F1} " +
+                    $"rectHeight={rt.rect.height:F1} anchoredPos={rt.anchoredPosition} " +
+                    $"pivot={rt.pivot} preferredWidth={text.preferredWidth:F1} " +
+                    $"preferredHeight={text.preferredHeight:F1} fontSize={text.fontSize} " +
+                    $"overflow={text.horizontalOverflow} alignment={text.alignment} " +
+                    $"canvasScale={canvasScale:F2}");
+            }
         }
 
         /// <summary>Rebuilds the folder tree from the currently loaded program and redraws the row list.</summary>
