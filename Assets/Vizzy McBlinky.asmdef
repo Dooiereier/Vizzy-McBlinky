@@ -1,0 +1,8 @@
+{
+	"name": "Vizzy McBlinky",
+	"references": [
+		"UnityEngine.UI",
+		"Unity.TextMeshPro",
+		"Unity.Mathematics"
+	]
+}
