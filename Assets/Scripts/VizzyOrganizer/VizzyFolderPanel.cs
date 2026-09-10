@@ -23,6 +23,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private const float PopupWidth = 330f;
         private const float RowHeight = 36f;
         private const int FontSize = 20;
+        private const float IndentPerDepth = 20f;
 
         private VizzyUIController _controller;
         private VizzyFolderIndex _index = new VizzyFolderIndex();
@@ -251,7 +252,7 @@ namespace Assets.Scripts.VizzyOrganizer
             textRect.SetParent(rowRect, false);
             textRect.anchorMin = Vector2.zero;
             textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = new Vector2(8f + depth * 12f, 0f);
+            textRect.offsetMin = new Vector2(8f + depth * IndentPerDepth, 0f);
             textRect.offsetMax = Vector2.zero;
 
             var text = textGo.GetComponent<Text>();
@@ -260,6 +261,9 @@ namespace Assets.Scripts.VizzyOrganizer
             text.color = labelColor ?? Color.white;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = FontSize;
+            // Bold at the top level, regular everywhere nested under it - makes root vs.
+            // sub-entry obvious at a glance instead of relying on indentation alone.
+            text.fontStyle = depth <= 1 ? FontStyle.Bold : FontStyle.Normal;
             text.raycastTarget = false;
 
             var toggle = rowGo.GetComponent<Toggle>();
