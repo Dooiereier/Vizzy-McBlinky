@@ -188,6 +188,11 @@ namespace Assets.Scripts.VizzyOrganizer
             handleRect.SetParent(scrollbarRect, false);
             handleRect.anchorMin = Vector2.zero;
             handleRect.anchorMax = Vector2.one; // Scrollbar component resizes/positions this itself
+            // Same bug as Content above: fully stretched on both axes (anchorMin=0,
+            // anchorMax=1) with sizeDelta left at the GameObject default of (100, 100) makes
+            // the real size parentSize + sizeDelta - the handle rendered ~100 units wider and
+            // taller than the scrollbar track it's supposed to fill/fit within.
+            handleRect.sizeDelta = Vector2.zero;
             var handleImage = handleGo.GetComponent<Image>();
             handleImage.color = new Color(1f, 1f, 1f, 0.35f);
 
