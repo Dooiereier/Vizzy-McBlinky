@@ -119,7 +119,11 @@ namespace Assets.Scripts.VizzyOrganizer
             viewportRect.anchorMin = Vector2.zero;
             viewportRect.anchorMax = Vector2.one;
             viewportRect.offsetMin = Vector2.zero;
-            viewportRect.offsetMax = Vector2.zero;
+            // Permanently reserve space for the scrollbar on the right, rather than
+            // relying on ScrollRect's AutoHideAndExpandViewport to resize this dynamically
+            // - that ended up clipping the left edge of row text instead, for reasons not
+            // worth chasing when a static, always-correct layout is simple enough here.
+            viewportRect.offsetMax = new Vector2(-(ScrollbarWidth + 2f), 0f);
 
             var contentGo = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             var contentRect = (RectTransform)contentGo.transform;
@@ -139,9 +143,10 @@ namespace Assets.Scripts.VizzyOrganizer
             var fitter = contentGo.GetComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            // Vertical scrollbar along the right edge, wired into the ScrollRect below -
-            // AutoHideAndExpandViewport means it (and the space it takes) only appears
-            // once the content actually needs to scroll.
+            // Vertical scrollbar along the right edge, wired into the ScrollRect below.
+            // Space for it is already permanently reserved in the viewport above, so this
+            // stays visible always (AutoHide/AutoHideAndExpandViewport would dynamically
+            // resize the viewport itself, which is what caused the left-edge clipping bug).
             var scrollbarGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
             var scrollbarRect = (RectTransform)scrollbarGo.transform;
             scrollbarRect.SetParent(_popupOuter, false);
@@ -172,8 +177,7 @@ namespace Assets.Scripts.VizzyOrganizer
             scrollRect.vertical = true;
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
             scrollRect.verticalScrollbar = scrollbar;
-            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-            scrollRect.verticalScrollbarSpacing = 2f;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
 
             _rowContainer = contentRect;
             _popup.SetActive(false);
