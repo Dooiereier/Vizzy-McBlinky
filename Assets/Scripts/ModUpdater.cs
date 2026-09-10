@@ -93,18 +93,17 @@ namespace Assets.Scripts
                 if (_startedThisSession) return;
                 _startedThisSession = true;
 
-                _localVersion = GetLocalVersion();
-                if (_localVersion == null)
-                {
-                    Debug.Log("[Vizzy McBlinky] Update check skipped - couldn't find this mod's own installed version.");
-                    return;
-                }
+                // Deliberately NOT reading the local version here - the game logs
+                // "Mod Loaded" (which is what populates Game.Instance.ModManager.KnownMods
+                // with this mod's own entry) *after* OnModInitialized runs, so looking
+                // ourselves up this early always failed. FetchRoutine() retries this with
+                // a short grace period instead, once it's actually running as a coroutine.
 
                 if (string.IsNullOrWhiteSpace(LatestVersionUrl))
                 {
                     // LatestVersionUrl left empty (e.g. temporarily cleared for testing) -
                     // just log, don't show anything.
-                    Debug.Log($"[Vizzy McBlinky] Update check - LatestVersionUrl not configured. Current version {_localVersion}.");
+                    Debug.Log("[Vizzy McBlinky] Update check - LatestVersionUrl not configured.");
                     return;
                 }
 
@@ -141,6 +140,24 @@ namespace Assets.Scripts
         /// </summary>
         public IEnumerator FetchRoutine()
         {
+            // The game only adds this mod's own entry to KnownMods *after*
+            // OnModInitialized returns (it logs "Mod Loaded" right after), so retry
+            // for a few seconds rather than giving up on the very first frame.
+            const float localVersionGraceSeconds = 5f;
+            var localVersionDeadline = Time.realtimeSinceStartup + localVersionGraceSeconds;
+            while (_localVersion == null && Time.realtimeSinceStartup < localVersionDeadline)
+            {
+                _localVersion = GetLocalVersion();
+                if (_localVersion == null)
+                    yield return null;
+            }
+
+            if (_localVersion == null)
+            {
+                Debug.Log("[Vizzy McBlinky] Update check skipped - couldn't find this mod's own installed version.");
+                yield break;
+            }
+
             // Overall watchdog: no matter how slow or broken the network is, the
             // whole "wait for the published version" process must finish before the
             // deadline (Time.realtimeSinceStartup is unaffected by pauses/hitches).
