@@ -24,6 +24,7 @@ namespace Assets.Scripts.VizzyOrganizer
         private const float RowHeight = 36f;
         private const int FontSize = 20;
         private const float IndentPerDepth = 20f;
+        private const float ScrollbarWidth = 10f;
 
         private VizzyUIController _controller;
         private VizzyFolderIndex _index = new VizzyFolderIndex();
@@ -138,12 +139,41 @@ namespace Assets.Scripts.VizzyOrganizer
             var fitter = contentGo.GetComponent<ContentSizeFitter>();
             fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
+            // Vertical scrollbar along the right edge, wired into the ScrollRect below -
+            // AutoHideAndExpandViewport means it (and the space it takes) only appears
+            // once the content actually needs to scroll.
+            var scrollbarGo = new GameObject("Scrollbar", typeof(RectTransform), typeof(Image), typeof(Scrollbar));
+            var scrollbarRect = (RectTransform)scrollbarGo.transform;
+            scrollbarRect.SetParent(_popupOuter, false);
+            scrollbarRect.anchorMin = new Vector2(1f, 0f);
+            scrollbarRect.anchorMax = new Vector2(1f, 1f);
+            scrollbarRect.pivot = new Vector2(1f, 1f);
+            scrollbarRect.sizeDelta = new Vector2(ScrollbarWidth, 0f);
+            scrollbarRect.anchoredPosition = Vector2.zero;
+            scrollbarGo.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.05f);
+
+            var handleGo = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+            var handleRect = (RectTransform)handleGo.transform;
+            handleRect.SetParent(scrollbarRect, false);
+            handleRect.anchorMin = Vector2.zero;
+            handleRect.anchorMax = Vector2.one; // Scrollbar component resizes/positions this itself
+            var handleImage = handleGo.GetComponent<Image>();
+            handleImage.color = new Color(1f, 1f, 1f, 0.35f);
+
+            var scrollbar = scrollbarGo.GetComponent<Scrollbar>();
+            scrollbar.handleRect = handleRect;
+            scrollbar.direction = Scrollbar.Direction.BottomToTop;
+            scrollbar.targetGraphic = handleImage;
+
             var scrollRect = _popup.GetComponent<ScrollRect>();
             scrollRect.content = contentRect;
             scrollRect.viewport = viewportRect;
             scrollRect.horizontal = false;
             scrollRect.vertical = true;
             scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.verticalScrollbar = scrollbar;
+            scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+            scrollRect.verticalScrollbarSpacing = 2f;
 
             _rowContainer = contentRect;
             _popup.SetActive(false);
